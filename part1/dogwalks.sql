@@ -1,6 +1,7 @@
 DROP DATABASE IF EXISTS DogWalkService;
 CREATE DATABASE DogWalkService;
 USE DogWalkService;
+
 CREATE TABLE Users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
@@ -53,3 +54,33 @@ CREATE TABLE WalkRatings (
     FOREIGN KEY (owner_id) REFERENCES Users(user_id),
     CONSTRAINT unique_rating_per_walk UNIQUE (request_id)
 );
+
+
+INSERT INTO Users (username, email, password_hash, role) VALUES
+  ('alice123', 'alice@example.com', 'hashed123', 'owner'),
+  ('bobwalker', 'bob@example.com', 'hashed456', 'walker'),
+  ('carol123', 'carol@example.com', 'hashed789', 'owner'),
+  ('frankowner', 'frank@example.com', 'hashed101', 'owner'),
+  ('gracewalker', 'grace@example.com', 'hashed202', 'walker');
+
+
+INSERT INTO Dogs (owner_id, name, size) VALUES
+  ((SELECT user_id FROM Users WHERE username = 'alice123'), 'Max', 'medium'),
+  ((SELECT user_id FROM Users WHERE username = 'carol123'), 'Bella', 'small'),
+  ((SELECT user_id FROM Users WHERE username = 'frankowner'), 'Buddy', 'large'),
+  ((SELECT user_id FROM Users WHERE username = 'frankowner'), 'Coco', 'medium'),
+  ((SELECT user_id FROM Users WHERE username = 'alice123'), 'Milo', 'small');
+
+
+INSERT INTO WalkRequests (dog_id, requested_time, duration_minutes, location, status)
+SELECT d.dog_id, walk_data.requested_time, walk_data.duration_minutes, walk_data.location, walk_data.status
+FROM Dogs d
+JOIN Users u ON d.owner_id = u.user_id
+JOIN (VALUES 
+  ('alice123', 'Max', '2025-06-10 08:00:00', 30, 'Parklands', 'open'),
+  ('carol123', 'Bella', '2025-06-10 09:30:00', 45, 'Beachside Ave', 'accepted'),
+  ('frankowner', 'Buddy', '2025-06-12 15:00:00', 50, 'Downtown Square', 'open'),
+  ('frankowner', 'Coco', '2025-06-14 11:30:00', 40, 'Garden District', 'open'),
+  ('alice123', 'Milo', '2025-06-15 18:00:00', 35, 'Lakeside Path', 'open')
+) AS walk_data(username, dog_name, requested_time, duration_minutes, location, status)
+  ON u.username = walk_data.username AND d.name = walk_data.dog_name;

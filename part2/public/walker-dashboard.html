@@ -8,8 +8,9 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 </head>
 <body class="bg-light">
-  <div id="app" class="container py-4">
+  <div id="app" class="container py-5">
     <h1 class="mb-4 text-success">Walker Dashboard</h1>
+    <button class="btn btn-outline-secondary mb-3" @click="logout">Logout</button>
 
     <!-- Alert messages -->
     <div v-if="message" class="alert alert-info">{{ message }}</div>
@@ -43,9 +44,22 @@
         const walks = ref([]);
         const message = ref('');
         const error = ref('');
-        const user = 3;
+        let currentUserId = null; // 用于存储当前用户的ID
 
-        async function loadWalkRequests() {
+        // 获取当前登录用户的信息
+        async function getCurrentUser() {
+          try {
+            const res = await fetch('/api/users/me');
+            if (!res.ok) throw new Error('Failed to fetch current user');
+            const user = await res.json();
+            currentUserId = user.user_id; // 将获取到的 user_id 存起来
+          } catch (err) {
+            error.value = err.message;
+          }
+        }
+
+        // 获取所有开放的遛狗请求
+        async function loadOpenWalks() {
           try {
             const res = await fetch('/api/walks');
             if (!res.ok) throw new Error('Failed to load walk requests');
@@ -55,34 +69,62 @@
           }
         }
 
+        // 申请遛狗
         async function applyToWalk(requestId) {
+          // 如果还没有获取到用户ID，则先获取
+          if (!currentUserId) {
+            await getCurrentUser();
+          }
+          // 如果仍然没有ID（例如，会话过期），则中止操作
+          if (!currentUserId) {
+            error.value = "Could not verify user. Please log in again.";
+            return;
+          }
+
           try {
             const res = await fetch(`/api/walks/${requestId}/apply`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ walker_id: user })
+              // 在请求体中发送动态获取的 walker_id
+              body: JSON.stringify({ walker_id: currentUserId })
             });
             const result = await res.json();
 
             if (!res.ok) throw new Error(result.error || 'Application failed');
             message.value = result.message;
             error.value = '';
-            await loadWalkRequests();
+            await loadOpenWalks();
           } catch (err) {
             error.value = err.message;
             message.value = '';
           }
         }
 
+        // 登出方法
+        const logout = async () => {
+          try {
+            // 向后端发送登出请求
+            await fetch('/api/users/logout', { method: 'POST' });
+          } catch (error) {
+            // 即使请求失败，也打印错误并继续重定向
+            console.error('Logout request failed:', error);
+          } finally {
+            // 无论请求成功或失败，都将用户重定向到登录页面
+            window.location.href = 'index.html';
+          }
+        };
+
         onMounted(() => {
-          loadWalkRequests();
+          loadOpenWalks();
+          getCurrentUser(); // 页面加载时就获取用户信息
         });
 
         return {
           walks,
           message,
           error,
-          applyToWalk
+          applyToWalk,
+          logout
         };
       }
     }).mount('#app');

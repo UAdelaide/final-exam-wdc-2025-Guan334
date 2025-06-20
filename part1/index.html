@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Doggo Fun Zone</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive;
+      background: linear-gradient(45deg, red, yellow, lime, cyan, blue, magenta);
+      animation: rainbow 2s infinite;
+    }
+    @keyframes rainbow {
+      0% { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(360deg); }
+    }
+    #tinyButton {
+      width: 30px;
+      height: 20px;
+      font-size: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>{{ title }}</h1>
+    <div>
+      <img :src="dogUrl" id="dogImage">
+      <p>Dog of the day!</p>
+    </div>
+    <input type="text" placeholder="Type the secret code then press the tiny button ten times!">
+    <button id="tinyButton" @click="annoy">Click me!</button>
+  </div>
+  <script>
+    const { createApp } = Vue;
+    createApp({
+      data() {
+        return { title: '今日狗狗', dogUrl: '' };
+      },
+      mounted() {
+        fetch('https://dog.ceo/api/breeds/image/random')
+          .then(r => r.json())
+          .then(d => { this.dogUrl = d.message; });
+      },
+      methods: {
+        annoy() {
+          alert('Not accessible!');
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

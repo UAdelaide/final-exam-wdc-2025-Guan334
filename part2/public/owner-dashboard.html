@@ -8,8 +8,9 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 </head>
 <body class="bg-light">
-  <div id="app" class="container py-4">
+  <div id="app" class="container py-5">
     <h1 class="mb-4 text-primary">Owner Dashboard</h1>
+    <button class="btn btn-outline-secondary mb-3" @click="logout">Logout</button>
 
     <!-- Walk request form -->
     <div class="card mb-4">
@@ -19,8 +20,13 @@
       <div class="card-body">
         <form @submit.prevent="submitWalkRequest">
           <div class="mb-3">
-            <label class="form-label">Dog ID</label>
-            <input v-model="form.dog_id" type="number" class="form-control" required>
+            <label for="dog-select" class="form-label">Select Your Dog</label>
+            <select id="dog-select" v-model="form.dog_id" class="form-select" required>
+              <option disabled value="">Select a dog</option>
+              <option v-for="dog in dogs" :key="dog.dog_id" :value="dog.dog_id">
+                {{ dog.name }}
+              </option>
+            </select>
           </div>
           <div class="mb-3">
             <label class="form-label">Requested Date & Time</label>
@@ -79,6 +85,7 @@
         const walks = ref([]);
         const message = ref('');
         const error = ref('');
+        const dogs = ref([]);
 
         async function loadWalks() {
           try {
@@ -115,8 +122,34 @@
           }
         }
 
+        // 登出方法
+        const logout = async () => {
+          try {
+            // 向后端发送登出请求
+            await fetch('/api/users/logout', { method: 'POST' });
+          } catch (error) {
+            // 即使请求失败，也打印错误并继续重定向
+            console.error('Logout request failed:', error);
+          } finally {
+            // 无论请求成功或失败，都将用户重定向到登录页面
+            window.location.href = 'index.html';
+          }
+        };
+
+        // 获取该主人名下的所有狗狗
+        async function loadDogs() {
+          try {
+            const res = await fetch('/api/users/mydogs');
+            if (!res.ok) throw new Error('Failed to load dogs');
+            dogs.value = await res.json();
+          } catch (err) {
+            error.value = 'Failed to load dogs';
+          }
+        }
+
         onMounted(() => {
           loadWalks();
+          loadDogs();
         });
 
         return {
@@ -124,7 +157,9 @@
           walks,
           message,
           error,
-          submitWalkRequest
+          dogs,
+          submitWalkRequest,
+          logout
         };
       }
     }).mount('#app');
